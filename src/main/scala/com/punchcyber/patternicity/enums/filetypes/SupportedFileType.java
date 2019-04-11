@@ -8,5 +8,8 @@ public enum SupportedFileType {
     PCAP,
     EVTX,
     BRO,
-    UNSUPPORTED
+    UNSUPPORTED,
+    UNSET,
+    COMPRESSED,
+    ARCHIVED
 }

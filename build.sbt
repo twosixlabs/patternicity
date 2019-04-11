@@ -12,14 +12,20 @@ resolvers ++= Seq(
     "Hortonworks Jetty" at "http://repo.hortonworks.com/content/repositories/jetty-hadoop/"
 )
 
+// HDP and HDF minor version tags to tack on to dependencies
+val hdpM: String = "3.1.0.0-78"
+val hdfM: String = "3.4.0.0-155"
+
 libraryDependencies ++= Seq(
-    "org.apache.storm" % "storm-core" % "1.2.1.3.1.0.0-78" % Provided
+    "org.apache.storm"   %  "storm-core" % "1.2.1.3.1.0.0-78" % Provided
             exclude("org.slf4j", "slf4j-log4j12")
-            exclude("log4j","log4j"),
-    "org.apache.arrow" % "arrow-memory" % "0.12.0",
-    "org.apache.arrow" % "arrow-vector" % "0.12.0",
-    "org.apache.spark" %% "spark-sql" % "2.4.0",
-    "org.apache.maven" % "maven-artifact" % "3.6.0"
+            exclude("log4j"    , "log4j"),
+    "org.apache.arrow"   %  "arrow-memory"    % "0.12.0",
+    "org.apache.arrow"   %  "arrow-vector"    % "0.12.0",
+    "org.apache.spark"   %% "spark-sql"       % "2.4.0",
+    "org.apache.maven"   %  "maven-artifact"  % "3.6.0",
+    "org.apache.kafka"   %  "kafka-clients"   % "2.0.0.3.1.0.0-78",
+    "org.apache.commons" % "commons-compress" % "1.18"
 )
 
 assemblyMergeStrategy in assembly := {

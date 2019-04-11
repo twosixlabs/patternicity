@@ -1,4 +1,4 @@
-package com.punchcyber.patternicity.common
+package com.punchcyber.patternicity.scratch
 
 object ExampleMath {
     def main(args: Array[String]): Unit = {

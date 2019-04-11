@@ -1,4 +1,4 @@
-package com.punchcyber.patternicity.common
+package com.punchcyber.patternicity.scratch
 
 import java.io.{BufferedReader, FileInputStream, InputStreamReader}
 
@@ -18,7 +18,7 @@ object Scratch {
         
         
         val filename: String = "/Users/mbossert/Downloads/a/5e7a57f2ad08e2753eea74ca46b7b376_20120701/conn.log"
-        val broHeader: BroLogHeader = new BroLogHeader(filename)
+        val broHeader: BroLogHeader = new BroLogHeader()
         
         // create Arrow schema
         val arrowFields: ImmutableList.Builder[Field] = ImmutableList.builder()
