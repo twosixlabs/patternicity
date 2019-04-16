@@ -1,5 +1,6 @@
 package com.punchcyber.patternicity.enums.bro;
 
+@SuppressWarnings("unused")
 public enum SupportedDataTypes {
     BOOL,
     COUNT,

@@ -22,14 +22,47 @@ libraryDependencies ++= Seq(
             exclude("log4j"    , "log4j"),
     "org.apache.arrow"   %  "arrow-memory"    % "0.12.0",
     "org.apache.arrow"   %  "arrow-vector"    % "0.12.0",
-    "org.apache.spark"   %% "spark-sql"       % "2.4.0",
     "org.apache.maven"   %  "maven-artifact"  % "3.6.0",
     "org.apache.kafka"   %  "kafka-clients"   % "2.0.0.3.1.0.0-78",
+    "org.apache.commons" % "commons-lang3" % "3.8.1",
+    "commons-collections" % "commons-collections" % "20040616",
     "org.apache.commons" % "commons-compress" % "1.18"
+            exclude("commons-beanutils", "commons-beanutils-core")
+            exclude("commons-beanutils", "commons-beanutils")
+            exclude("commons-collections", "commons-collections"),
+    "org.apache.hbase"   % "hbase-common"     % "2.0.2.3.1.0.0-78"
+            exclude("org.slf4j","slf4j-log4j12")
+            exclude("log4j","log4j"),
+    "org.apache.hbase"   % "hbase-client"     % "2.0.2.3.1.0.0-78"
+            exclude("org.slf4j","slf4j-log4j12")
+            exclude("log4j","log4j"),
+    "org.apache.hadoop"  % "hadoop-aws"       % "3.1.1.3.1.0.0-78"
+            exclude("org.slf4j", "slf4j-log4j12")
+            exclude("log4j","log4j")
+            exclude("commons-beanutils", "commons-beanutils-core")
+            exclude("commons-beanutils", "commons-beanutils")
+            exclude("commons-collections", "commons-collections"),
+    "org.apache.hadoop" % "hadoop-common" % "3.1.1.3.1.0.0-78"
+            exclude("org.slf4j", "slf4j-log4j12")
+            exclude("log4j","log4j")
+            exclude("commons-beanutils", "commons-beanutils-core")
+            exclude("commons-beanutils", "commons-beanutils")
+            exclude("commons-collections", "commons-collections")
 )
 
 assemblyMergeStrategy in assembly := {
-    
+    case PathList(ps @ _*) if ps.last endsWith "io.netty.versions.properties" =>
+        MergeStrategy.rename
+    case PathList(ps @ _*) if ps.last equalsIgnoreCase "package-info.class" =>
+        MergeStrategy.rename
+    case PathList(ps @ _*) if ps.last equalsIgnoreCase "UnusedStubClass.class" =>
+        MergeStrategy.rename
+    case PathList(ps @ _*) if ps.last equalsIgnoreCase "git.properties" =>
+        MergeStrategy.rename
+    /*case PathList("io","netty", _ @ _*) =>
+        MergeStrategy.last*/
+    /*case PathList(ps @ _*) if ps.last equalsIgnoreCase  "libnetty-transport-native-epoll.so" =>
+        MergeStrategy.first*/
     case x => val oldStrategy = (assemblyMergeStrategy in assembly).value
         oldStrategy(x)
 }

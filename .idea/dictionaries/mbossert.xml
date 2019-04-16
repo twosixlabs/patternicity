@@ -1,10 +1,43 @@
 <component name="ProjectDictionaryState">
   <dictionary name="mbossert">
     <words>
+      <w>addr</w>
+      <w>backoff</w>
+      <w>beanutils</w>
+      <w>brolog</w>
       <w>clojars</w>
+      <w>darpa</w>
+      <w>datareservoir</w>
+      <w>dhcp</w>
+      <w>dport</w>
+      <w>epoll</w>
+      <w>evtx</w>
+      <w>filetype</w>
+      <w>fuid</w>
+      <w>hbase</w>
       <w>hortonworks</w>
+      <w>iter</w>
+      <w>libnetty</w>
+      <w>mbossert</w>
+      <w>modbus</w>
+      <w>msec</w>
+      <w>mutators</w>
+      <w>nanos</w>
+      <w>netcontrol</w>
+      <w>ntlm</w>
+      <w>ocsp</w>
+      <w>openflow</w>
       <w>patternicity</w>
+      <w>pcap</w>
+      <w>rowkey</w>
+      <w>smbcmd</w>
+      <w>smtp</w>
+      <w>struct</w>
       <w>tfield</w>
+      <w>traceroute</w>
+      <w>usec</w>
+      <w>yyyy</w>
+      <w>znode</w>
     </words>
   </dictionary>
 </component>

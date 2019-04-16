@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 
 import com.punchcyber.patternicity.enums.bro.LogPath
-import org.apache.orc.FileFormatException
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.matching.Regex
@@ -40,14 +39,12 @@ class BroLogHeader {
         """.stripMargin
     }
     
-    @throws[FileFormatException]
     def parseHeader(br: BufferedReader): BroLogHeader = {
         val header: ArrayBuffer[String] = ArrayBuffer[String]()
         
-        for(i: Int <- 0 to 7) {
+        for(_: Int <- 0 to 7) {
             val line: String = br.readLine()
             
-            System.out.println(line)
             if(line.startsWith("#")) header += line
         }
     
@@ -99,7 +96,7 @@ class BroLogHeader {
             this
         }
         else {
-            throw new FileFormatException("File does not have the expected Bro log header")
+            throw new IOException("File does not have the expected Bro log header")
         }
     }
 }

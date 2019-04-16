@@ -4,9 +4,8 @@ import java.net.{InetAddress, UnknownHostException}
 import java.time.{Duration, Instant}
 import java.util.regex.{Pattern, PatternSyntaxException}
 
-import org.apache.arrow.vector.types.{FloatingPointPrecision, IntervalUnit, TimeUnit}
 import org.apache.arrow.vector.types.pojo.ArrowType
-import org.apache.spark.sql.types._
+import org.apache.arrow.vector.types.{FloatingPointPrecision, IntervalUnit, TimeUnit}
 
 import scala.collection.immutable.HashMap
 import scala.util.matching.Regex
@@ -42,13 +41,13 @@ object BroDataTypeConversions {
         }
     }
     
-    def fromBroShort(inputValue: String): Short = {
+    /*def fromBroShort(inputValue: String): Short = {
         try {
             inputValue.toShort
         } catch {
             case error: NumberFormatException => throw error
         }
-    }
+    }*/
     
     def fromBroInt(inputValue: String): Int = {
         try {
@@ -158,7 +157,7 @@ object BroDataTypeConversions {
         }
     }
     
-    def fromBroString(inputValue: String): String = inputValue
+    def fromBroString(inputValue: String): String = inputValue.trim
     
     def fromBroColString(inputValue: String): Array[String] = {
         val split: Array[String] = inputValue.split(',')
@@ -174,25 +173,10 @@ object BroDataTypeConversions {
         "interval" -> fromBroInterval,
         "string"   -> fromBroString,
         "pattern"  -> fromBroPattern,
-        "port"     -> fromBroShort,
+        "port"     -> fromBroInt,
         "addr"     -> fromBroAddr,
         "subnet"   -> fromBroString,
         "enum"     -> fromBroString
-    )
-    
-    val broTypeToSparkType: HashMap[String,DataType] = HashMap[String,DataType](
-        "bool" ->  BooleanType,
-        "count"    -> DoubleType,
-        "int"      -> IntegerType,
-        "double"   -> DoubleType,
-        "time"     -> TimestampType,
-        "interval" -> DoubleType,
-        "string"   -> StringType,
-        "pattern"  -> StringType,
-        "port"     -> ShortType,
-        "addr"     -> StringType,
-        "subnet"   -> StringType,
-        "enum"     -> StringType
     )
     
     val broTypeToArrowType: HashMap[String,ArrowType] = HashMap[String,ArrowType](

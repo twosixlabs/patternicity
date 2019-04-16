@@ -1,5 +1,6 @@
 package com.punchcyber.patternicity.enums.filetypes;
 
+@SuppressWarnings("unused")
 public enum compressedFileTypes {
     GZIP("gz"),
     TAR("tar"),

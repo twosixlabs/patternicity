@@ -1,22 +1,90 @@
 package com.punchcyber.patternicity.scratch
 
-import java.io.{BufferedReader, FileInputStream, InputStreamReader}
+import java.io._
 
-import avro.shaded.com.google.common.collect.ImmutableList
-import com.punchcyber.patternicity.common.datatype.bro.BroDataTypeConversions.broTypeToArrowType
 import com.punchcyber.patternicity.common.datatype.bro.BroLogHeader
 import com.punchcyber.patternicity.common.datatype.bro.record.BroRecord
-import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
+import com.punchcyber.patternicity.common.utilities.FileMagic.{comp, magics}
+import com.punchcyber.patternicity.enums.filetypes.SupportedFileType
+import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveException, ArchiveInputStream, ArchiveStreamFactory}
+import org.apache.commons.compress.compressors.{CompressorException, CompressorStreamFactory}
+import org.apache.hadoop.hbase.client.Put
 
 object Scratch {
     def main(args: Array[String]): Unit = {
-        val dataToProc: String = "/shares/data/input/restricted/DARPA/"
+        def process(is: InputStream, filetype: Option[SupportedFileType] = None): Unit = {
+            val bis: BufferedInputStream = new BufferedInputStream(is)
+            var ft: Option[SupportedFileType] = filetype
+    
+            try { CompressorStreamFactory.detect(bis); ft = Some(SupportedFileType.COMPRESSED) }
+            catch { case _: CompressorException => }
+            try { ArchiveStreamFactory.detect(bis); ft = Some(SupportedFileType.ARCHIVED) }
+            catch { case _: ArchiveException => }
+    
+            if(!Array(Some(SupportedFileType.COMPRESSED),Some(SupportedFileType.ARCHIVED)).contains(ft)) {
+                val fileBytes: Array[Byte] = new Array[Byte](512)
+                bis.mark(1024)
+                bis.read(fileBytes)
+                bis.reset()
+        
+                for((magicBytes,name) <- magics) {
+                    if(comp(magicBytes,fileBytes)) {
+                        ft = Some(name)
+                    }
+                }
+            }
+    
+            ft match {
+                case None =>
+
+                case Some(SupportedFileType.UNSUPPORTED) =>
+                    System.out.println("Houston, we have a problem")
+
+                case Some(SupportedFileType.COMPRESSED) =>
+                    process(new CompressorStreamFactory().createCompressorInputStream(bis))
+
+                case Some(SupportedFileType.ARCHIVED) =>
+                    val ais: ArchiveInputStream =  new ArchiveStreamFactory().createArchiveInputStream(bis)
+                    var entry: ArchiveEntry = ais.getNextEntry
+    
+                    while(entry != null) {
+                        process(ais)
+        
+                        try {
+                            entry = ais.getNextEntry
+                        } catch {
+                            case _: Throwable =>
+                                entry = null
+                        }
+                    }
+
+                case Some(SupportedFileType.BRO) =>
+                    val br: BufferedReader = new BufferedReader(new InputStreamReader(bis))
+    
+                    val broHeader: BroLogHeader = new BroLogHeader
+                    broHeader.parseHeader(br)
+                    System.out.println(broHeader.toString)
+    
+                    var line: String = br.readLine()
+                    while(line != null && !line.startsWith("#")) {
+                        val record = BroRecord.apply(line,broHeader)
+                        
+                        
+                        //System.out.println(record.broFieldMap.mkString("\n"))
+                        val p: Put = record.getHbasePut
+                        System.out.println(p.toString)
+                        try { line = br.readLine() }
+                        catch { case _: IOException => line = null }
+                    }
+            }
+        }
+        
+        val filename: String = "src/resources/bro/files.2018-12-01.00%3A05%3A00-00%3A10%3A00.log.gz"
+        val is: InputStream = new FileInputStream(filename)
+        process(is)
         
         
-        
-        
-        
-        
+        /*val dataToProc: String = "/shares/data/input/restricted/DARPA/"
         val filename: String = "/Users/mbossert/Downloads/a/5e7a57f2ad08e2753eea74ca46b7b376_20120701/conn.log"
         val broHeader: BroLogHeader = new BroLogHeader()
         
@@ -52,13 +120,13 @@ object Scratch {
         
         while(line != null) {
             if(!line.startsWith("#")) {
-                val bro: BroRecord = new BroRecord(line,broHeader)
+                val bro: GenericBroRecord = new GenericBroRecord(line,broHeader)
                 
                 
             }
             
             line = fis.readLine()
-        }
+        }*/
         
         
         
