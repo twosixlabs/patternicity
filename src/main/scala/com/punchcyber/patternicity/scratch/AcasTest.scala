@@ -17,7 +17,7 @@ import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.slf4j.LoggerFactory
 
-object BroTest {
+object AcasTest {
     
     val fileQueue: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
     val broLogQueue: ArrayBlockingQueue[BroRecord] = new ArrayBlockingQueue[BroRecord](100000)
@@ -25,18 +25,18 @@ object BroTest {
     def main(args: Array[String]): Unit = {
         
         val findFiles: Thread = new Thread(new FindFiles)
-        val broFileProducer: Thread = new Thread(new BroParse)
+        val acasFileProducer: Thread = new Thread(new AcasParse)
         val hbaseWriter: Thread = new Thread(new HbaseWriter)
         
         findFiles.start()
-        broFileProducer.start()
+        acasFileProducer.start()
         hbaseWriter.start()
      }
     
     class FindFiles extends Runnable {
         override def run(): Unit = {
-            val watchedDirectory: String = "/shares/data/input/restricted/DARPA"
-//            val watchedDirectory: String = "/home/nathan-sanford/code/CHASE/patternicity/src/resources/bro"
+//            val watchedDirectory: String = "/shares/data/input/restricted/DARPA"
+            val watchedDirectory: String = "/home/nathan-sanford/code/CHASE/patternicity/src/resources/acas"
             System.out.println(s"About to start reading from $watchedDirectory")
 
             Files.walk(Paths.get(watchedDirectory))
@@ -64,7 +64,7 @@ object BroTest {
         }
     }
     
-    class BroParse extends Runnable {
+    class AcasParse extends Runnable {
         def process(is: InputStream, filetype: Option[SupportedFileType] = None): Unit = {
             val bis: BufferedInputStream = new BufferedInputStream(is)
             var ft: Option[SupportedFileType] = filetype
@@ -168,13 +168,13 @@ object BroTest {
     class HbaseWriter extends Runnable {
         val hbaseConf: Configuration = HBaseConfiguration.create()
         // Cluster configs
-        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
-        hbaseConf.set("hbase.zookeeper.quorum", "master-1.punch.datareservoir.net,master-2.punch.datareservoir.net,master-3.punch.datareservoir.net,master-4.punch.datareservoir.net,master-5.punch.datareservoir.net")
-        hbaseConf.set("zookeeper.znode.parent", "/hbase")
+//        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
+//        hbaseConf.set("hbase.zookeeper.quorum", "master-1.punch.datareservoir.net,master-2.punch.datareservoir.net,master-3.punch.datareservoir.net,master-4.punch.datareservoir.net,master-5.punch.datareservoir.net")
+//        hbaseConf.set("zookeeper.znode.parent", "/hbase")
 
         // local configs
-//        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
-//        hbaseConf.set("hbase.zookeeper.quorum", "localhost")
+        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
+        hbaseConf.set("hbase.zookeeper.quorum", "localhost")
         
         private val LOG = LoggerFactory.getLogger(classOf[Nothing])
     
