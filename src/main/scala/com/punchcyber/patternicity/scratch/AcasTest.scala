@@ -6,10 +6,7 @@ import java.time.{Duration, Instant}
 import java.util.concurrent.{ArrayBlockingQueue, ConcurrentLinkedQueue}
 
 import com.punchcyber.patternicity.common.datatype.acas.record.{AcasRecord, AcasRecordRaw}
-import com.punchcyber.patternicity.common.datatype.bro.BroLogHeader
-import com.punchcyber.patternicity.common.datatype.bro.record.BroRecord
 import com.punchcyber.patternicity.common.utilities.FileMagic.{comp, magics, recursiveFindFileType}
-import com.punchcyber.patternicity.enums.bro.LogPath
 import com.punchcyber.patternicity.enums.filetypes.SupportedFileType
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveException, ArchiveInputStream, ArchiveStreamFactory}
 import org.apache.commons.compress.compressors.{CompressorException, CompressorStreamFactory}
@@ -25,7 +22,7 @@ import io.circe.parser._
 object AcasTest {
     
     val fileQueue: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
-    val broLogQueue: ArrayBlockingQueue[BroRecord] = new ArrayBlockingQueue[BroRecord](100000)
+    val acasLogQueue: ArrayBlockingQueue[AcasRecord] = new ArrayBlockingQueue[AcasRecord](100000)
     
     def main(args: Array[String]): Unit = {
         
@@ -52,7 +49,7 @@ object AcasTest {
                             // Right now, we only care about Bro
                             val filename: String = path.toAbsolutePath.toString
                             val is: FileInputStream = new FileInputStream(filename)
-                            val found: Option[Boolean] = recursiveFindFileType(SupportedFileType.JSON,is)
+                            val found: Option[Boolean] = recursiveFindFileType(SupportedFileType.JSON, is)
                             is.close()
                             found match {
                                 case Some(true) =>
@@ -60,8 +57,7 @@ object AcasTest {
                                     val src = Source.fromFile(filename)
                                     val firstRecordString = src.getLines.find(_ => true)
                                     src.close()
-                                    val firstRecord = decode[AcasRecordRaw](firstRecordString.get)
-                                    firstRecord match {
+                                    decode[AcasRecordRaw](firstRecordString.get) match {
                                         case Left(failure) =>
                                         case Right(json) => fileQueue.offer(filename)
                                     }
@@ -127,19 +123,19 @@ object AcasTest {
                         }
                     }
             
-                case Some(SupportedFileType.BRO) =>
+                case Some(SupportedFileType.JSON) =>
                     val br: BufferedReader = new BufferedReader(new InputStreamReader(bis))
-                    val broHeader: BroLogHeader = new BroLogHeader
-                    broHeader.parseHeader(br)
-                    
                     var line: String = br.readLine()
                     
-                    while(line != null && !line.startsWith("#")) {
+                    while(line != null) {
                         
-                        if(broLogQueue.remainingCapacity() > 1000) {
+                        if(acasLogQueue.remainingCapacity() > 1000) {
                             try {
-                                val record: BroRecord = BroRecord(line,broHeader)
-                                broLogQueue.offer(record)
+                                decode[AcasRecordRaw](line) match {
+                                    case Left(failure) => System.err.println(failure)
+                                    case Right(record) => acasLogQueue.offer(AcasRecord(record))
+                                }
+
                             } catch {
                                 case e: Exception => System.err.println(e)
                             }
@@ -150,7 +146,7 @@ object AcasTest {
                             var backoff: Int = 100
                             var tries: Int = 0
                             
-                            while(broLogQueue.remainingCapacity() <= 1000 && tries < 35) {
+                            while(acasLogQueue.remainingCapacity() <= 1000 && tries < 35) {
                                 Thread.sleep(backoff)
                                 backoff *= 2
                                 tries += 1
@@ -173,10 +169,12 @@ object AcasTest {
             val fileQueueIter: java.util.Iterator[String] = fileQueue.iterator()
             while(fileQueueIter.hasNext) {
                 val fn: String = fileQueue.poll()
-                
-                System.out.println(s"Processing file: $fn")
-                val fis: FileInputStream = new FileInputStream(fn)
-                process(fis)
+
+                if (fn != null) {
+                    System.out.println(s"Processing file: $fn")
+                    val fis: FileInputStream = new FileInputStream(fn)
+                    process(fis)
+                }
             }
         }
     }
@@ -193,66 +191,19 @@ object AcasTest {
         hbaseConf.set("hbase.zookeeper.quorum", "localhost")
         
         private val LOG = LoggerFactory.getLogger(classOf[Nothing])
-    
-        private val POOL_SIZE = 10
-        private val TABLE = TableName.valueOf("HACKSAW:BRO")
         
         override def run(): Unit = {
-            val listener: BufferedMutator.ExceptionListener = (e: RetriesExhaustedWithDetailsException, _: BufferedMutator) => {
-                var i = 0
-                while ( {
-                    i < e.getNumExceptions
-                }) {
-                    LOG.info("Failed to sent put " + e.getRow(i) + ".")
-            
-                    {
-                        i += 1
-                        i - 1
-                    }
-                }
-            }
-            
             try {
-                val hbaseConnection: Connection = ConnectionFactory.createConnection(hbaseConf)
-                
-                val tableMutators: Map[LogPath,BufferedMutator] = Map[LogPath,BufferedMutator](
-                    LogPath.CONN        -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_CONN")).listener(listener)),
-                    LogPath.DNS         -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_DNS")).listener(listener)),
-                    LogPath.FILES       -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_FILES")).listener(listener)),
-                    LogPath.FTP         -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_FTP")).listener(listener)),
-                    LogPath.HTTP        -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_HTTP")).listener(listener)),
-                    LogPath.KERBEROS    -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_KERBEROS")).listener(listener)),
-                    LogPath.MYSQL       -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_MYSQL")).listener(listener)),
-                    LogPath.NOTICE      -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_NOTICE")).listener(listener)),
-                    LogPath.PE          -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_PE")).listener(listener)),
-                    LogPath.RADIUS      -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_RADIUS")).listener(listener)),
-                    LogPath.RDP         -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_RDP")).listener(listener)),
-                    LogPath.SIP         -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SIP")).listener(listener)),
-                    LogPath.SMB_CMD     -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SMB_CMD")).listener(listener)),
-                    LogPath.SMB_MAPPING -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SMB_MAPPING")).listener(listener)),
-                    LogPath.SMTP        -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SMTP")).listener(listener)),
-                    LogPath.SNMP        -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SNMP")).listener(listener)),
-                    LogPath.SSH         -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SSH")).listener(listener)),
-                    LogPath.SSL         -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SSL")).listener(listener)),
-                    LogPath.SYSLOG      -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_SYSLOG")).listener(listener)),
-                    LogPath.TUNNEL      -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_TUNNEL")).listener(listener)),
-                    LogPath.X509        -> hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:BRO_X509")).listener(listener))
-                )
-
                 var hack: Instant = Instant.now()
 
                 do {
-                    val record = broLogQueue.take()
+                    val record = acasLogQueue.take()
                     try {
-                        tableMutators(record.getLogPath).mutate(record.getHbasePut)
+                        println(s"protocol: ${record.protocol}  vulnPubDate: ${record.vulnPubDate} hasBeenMitigated: ${record.hasBeenMitigated}")
                     }
                     hack = Instant.now()
-                } while(broLogQueue.size() >= 0 && (Duration.between(hack,Instant.now()).toMinutes < 15))
-                
-                for(mutator <- tableMutators.values) {
-                    mutator.close()
-                }
-                
+                } while(acasLogQueue.size() >= 0 && (Duration.between(hack, Instant.now()).toMinutes < 15))
+
             } catch {
                 case e: IOException =>
                     LOG.info("exception while creating/destroying Connection or BufferedMutator", e)
@@ -260,5 +211,3 @@ object AcasTest {
         }
     }
 }
-
-// TODO: skip/filter these: sensor-health
