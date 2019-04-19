@@ -46,7 +46,7 @@ object AcasTest {
                     .sorted((a,b) => Files.getLastModifiedTime(a).compareTo(Files.getLastModifiedTime(b)))
                     .forEach {
                         path => {
-                            // Right now, we only care about Bro
+                            // First grab all of the JSON files
                             val filename: String = path.toAbsolutePath.toString
                             val is: FileInputStream = new FileInputStream(filename)
                             val found: Option[Boolean] = recursiveFindFileType(SupportedFileType.JSON, is)
