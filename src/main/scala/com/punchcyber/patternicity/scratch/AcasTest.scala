@@ -5,6 +5,7 @@ import java.nio.file.{Files, Paths}
 import java.time.{Duration, Instant}
 import java.util.concurrent.{ArrayBlockingQueue, ConcurrentLinkedQueue}
 
+import com.punchcyber.patternicity.common.datatype.acas.record.{AcasRecord, AcasRecordRaw}
 import com.punchcyber.patternicity.common.datatype.bro.BroLogHeader
 import com.punchcyber.patternicity.common.datatype.bro.record.BroRecord
 import com.punchcyber.patternicity.common.utilities.FileMagic.{comp, magics, recursiveFindFileType}
@@ -16,6 +17,10 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.slf4j.LoggerFactory
+
+import scala.io.Source
+import io.circe.generic.auto._
+import io.circe.parser._
 
 object AcasTest {
     
@@ -47,17 +52,23 @@ object AcasTest {
                             // Right now, we only care about Bro
                             val filename: String = path.toAbsolutePath.toString
                             val is: FileInputStream = new FileInputStream(filename)
-                            val found: Option[Boolean] = recursiveFindFileType(SupportedFileType.BRO,is)
+                            val found: Option[Boolean] = recursiveFindFileType(SupportedFileType.JSON,is)
+                            is.close()
                             found match {
                                 case Some(true) =>
-                                    if(!filename.contains("sensor-health")) {
-                                        fileQueue.offer(filename)
+                                    // Check that the first line of json matches that of an AcasRecord
+                                    val src = Source.fromFile(filename)
+                                    val firstRecordString = src.getLines.find(_ => true)
+                                    src.close()
+                                    val firstRecord = decode[AcasRecordRaw](firstRecordString.get)
+                                    firstRecord match {
+                                        case Left(failure) =>
+                                        case Right(json) => fileQueue.offer(filename)
                                     }
-                                    
+
                                 case Some(false) =>
                                 case None =>
                             }
-                            is.close()
                         }
                     }
             System.out.println(s"Loaded ${fileQueue.size()} files from Watched Directory")
@@ -65,6 +76,20 @@ object AcasTest {
     }
     
     class AcasParse extends Runnable {
+        def findFileType(bis: BufferedInputStream): Option[SupportedFileType] = {
+            val fileBytes: Array[Byte] = new Array[Byte](512)
+            bis.mark(1024)
+            bis.read(fileBytes)
+            bis.reset()
+
+            var ft: Option[SupportedFileType] = None
+            for((magicBytes,name) <- magics) {
+                if(comp(magicBytes,fileBytes)) {
+                    ft = Some(name)
+                }
+            }
+            ft
+        }
         def process(is: InputStream, filetype: Option[SupportedFileType] = None): Unit = {
             val bis: BufferedInputStream = new BufferedInputStream(is)
             var ft: Option[SupportedFileType] = filetype
@@ -75,16 +100,7 @@ object AcasTest {
             catch { case _: ArchiveException => }
         
             if(!Array(Some(SupportedFileType.COMPRESSED),Some(SupportedFileType.ARCHIVED)).contains(ft)) {
-                val fileBytes: Array[Byte] = new Array[Byte](512)
-                bis.mark(1024)
-                bis.read(fileBytes)
-                bis.reset()
-            
-                for((magicBytes,name) <- magics) {
-                    if(comp(magicBytes,fileBytes)) {
-                        ft = Some(name)
-                    }
-                }
+                ft = findFileType(bis)
             }
         
             ft match {

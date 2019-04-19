@@ -11,5 +11,7 @@ public enum SupportedFileType {
     UNSUPPORTED,
     UNSET,
     COMPRESSED,
-    ARCHIVED
+    ARCHIVED,
+    JSON,
+    ACAS
 }

@@ -53,7 +53,7 @@ object FileMagic {
     
     @throws[UnsupportedEncodingException] // TODO: do a better exception...this is close enough for the next 30 seconds...30, 29, 28, 27 ...
     def recursiveFindFileType(name: SupportedFileType, is:InputStream): Option[Boolean] = {
-        if(Array(SupportedFileType.EVTX,SupportedFileType.PCAP,SupportedFileType.BRO).contains(name)) {
+        if(Array(SupportedFileType.EVTX,SupportedFileType.PCAP,SupportedFileType.BRO,SupportedFileType.JSON).contains(name)) {
             val bis: BufferedInputStream = new BufferedInputStream(is)
             
             val fileBytes: Array[Byte] = new Array[Byte](512)
@@ -113,8 +113,6 @@ object FileMagic {
         None
     }
     
-    
-    
     val magics: mutable.HashMap[Array[Byte],SupportedFileType]= mutable.HashMap[Array[Byte],SupportedFileType](
         toBytes(0  ,0x1f,0x8b,0x08)                                         -> SupportedFileType.GZIP,
         toBytes(0  ,0x42,0x5A,0x68)                                         -> SupportedFileType.BZIP2,
@@ -125,8 +123,7 @@ object FileMagic {
         toBytes(0  ,0xd4,0xcd,0xb2,0xa1)                                    -> SupportedFileType.PCAP,
         toBytes(0  ,0xa1,0xb2,0xc3,0xd4)                                    -> SupportedFileType.PCAP,
         toBytes(0  ,0xa1,0xb2,0xcd,0xd4)                                    -> SupportedFileType.PCAP,
-        toBytes(0  ,0x23,0x73,0x65,0x70,0x61,0x72,0x61,0x74,0x6f,0x72,0x20) -> SupportedFileType.BRO
+        toBytes(0  ,0x23,0x73,0x65,0x70,0x61,0x72,0x61,0x74,0x6f,0x72,0x20) -> SupportedFileType.BRO,
+        toBytes(0  ,0x7B,0x22)                                              -> SupportedFileType.JSON // Just checking that it starts with {"
     )
-    
-    
 }

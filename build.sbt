@@ -58,6 +58,14 @@ libraryDependencies ++= Seq(
             exclude("commons-collections", "commons-collections")
 )
 
+val circeVersion = "0.10.0"
+
+libraryDependencies ++= Seq(
+    "io.circe" %% "circe-core",
+    "io.circe" %% "circe-generic",
+    "io.circe" %% "circe-parser"
+).map(_ % circeVersion)
+
 assemblyMergeStrategy in assembly := {
     case PathList(ps @ _*) if ps.last endsWith "io.netty.versions.properties" =>
         MergeStrategy.rename
