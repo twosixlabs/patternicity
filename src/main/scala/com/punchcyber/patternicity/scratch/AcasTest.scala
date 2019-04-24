@@ -5,7 +5,9 @@ import java.nio.file.{Files, Paths}
 import java.time.{Duration, Instant}
 import java.util.concurrent.{ArrayBlockingQueue, ConcurrentLinkedQueue}
 
+import com.punchcyber.patternicity.common.datatype.hbss.record.{HbssThreatEventAccessProtectionRecord, HbssThreatEventAccessProtectionRecordRaw}
 import com.punchcyber.patternicity.common.datatype.acas.record.{AcasRecord, AcasRecordRaw}
+import com.punchcyber.patternicity.common.datatype.json.record.{JsonRecord, JsonRecordRaw}
 import com.punchcyber.patternicity.common.utilities.FileMagic.{comp, magics, recursiveFindFileType}
 import com.punchcyber.patternicity.enums.filetypes.SupportedFileType
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveException, ArchiveInputStream, ArchiveStreamFactory}
@@ -18,20 +20,21 @@ import org.slf4j.LoggerFactory
 import scala.io.Source
 import io.circe.generic.auto._
 import io.circe.parser._
+import scala.util.control.Breaks.{break, breakable}
 
 object AcasTest {
     
     val fileQueue: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
-    val acasLogQueue: ArrayBlockingQueue[AcasRecord] = new ArrayBlockingQueue[AcasRecord](100000)
+    val jsonLogQueue: ArrayBlockingQueue[JsonRecord] = new ArrayBlockingQueue[JsonRecord](100000)
     
     def main(args: Array[String]): Unit = {
         
         val findFiles: Thread = new Thread(new FindFiles)
-        val acasFileProducer: Thread = new Thread(new AcasParse)
+        val jsonRecordFileProducer: Thread = new Thread(new JsonRecordParse)
         val hbaseWriter: Thread = new Thread(new HbaseWriter)
         
         findFiles.start()
-        acasFileProducer.start()
+        jsonRecordFileProducer.start()
         hbaseWriter.start()
      }
     
@@ -57,9 +60,15 @@ object AcasTest {
                                     val src = Source.fromFile(filename)
                                     val firstRecordString = src.getLines.find(_ => true)
                                     src.close()
-                                    decode[AcasRecordRaw](firstRecordString.get) match {
-                                        case Left(failure) =>
-                                        case Right(json) => fileQueue.offer(filename)
+                                    breakable {
+                                        decode[AcasRecordRaw](firstRecordString.get) match {
+                                            case Left(failure) =>
+                                            case Right(json) => fileQueue.offer(filename); break
+                                        }
+                                        decode[HbssThreatEventAccessProtectionRecordRaw](firstRecordString.get) match {
+                                            case Left(failure) => println(failure)
+                                            case Right(json) => fileQueue.offer(filename); break
+                                        }
                                     }
 
                                 case Some(false) =>
@@ -71,7 +80,29 @@ object AcasTest {
         }
     }
     
-    class AcasParse extends Runnable {
+    class JsonRecordParse extends Runnable {
+        def pushJsonRecordToQueue(line: String, queue: ArrayBlockingQueue[JsonRecord]): Unit = {
+            var matchFound = false
+            breakable {
+                decode[AcasRecordRaw](line) match {
+                    case Left(failure) =>
+                    case Right(record) => {
+                        jsonLogQueue.offer(AcasRecord(record))
+                        matchFound = true
+                        break
+                    }
+                }
+                decode[HbssThreatEventAccessProtectionRecordRaw](line) match {
+                    case Left(failure) =>
+                    case Right(record) => {
+                        jsonLogQueue.offer(HbssThreatEventAccessProtectionRecord(record))
+                        matchFound = true
+                        break
+                    }
+                }
+            }
+            if (!matchFound) println(s"Couldn't find a JsonRecord type match for line: $line")
+        }
         def findFileType(bis: BufferedInputStream): Option[SupportedFileType] = {
             val fileBytes: Array[Byte] = new Array[Byte](512)
             bis.mark(1024)
@@ -129,13 +160,9 @@ object AcasTest {
                     
                     while(line != null) {
                         
-                        if(acasLogQueue.remainingCapacity() > 1000) {
+                        if(jsonLogQueue.remainingCapacity() > 1000) {
                             try {
-                                decode[AcasRecordRaw](line) match {
-                                    case Left(failure) => System.err.println(failure)
-                                    case Right(record) => acasLogQueue.offer(AcasRecord(record))
-                                }
-
+                                pushJsonRecordToQueue(line, jsonLogQueue)
                             } catch {
                                 case e: Exception => System.err.println(e)
                             }
@@ -146,7 +173,7 @@ object AcasTest {
                             var backoff: Int = 100
                             var tries: Int = 0
                             
-                            while(acasLogQueue.remainingCapacity() <= 1000 && tries < 35) {
+                            while(jsonLogQueue.remainingCapacity() <= 1000 && tries < 35) {
                                 Thread.sleep(backoff)
                                 backoff *= 2
                                 tries += 1
@@ -197,12 +224,12 @@ object AcasTest {
                 var hack: Instant = Instant.now()
 
                 do {
-                    val record = acasLogQueue.take()
+                    val record = jsonLogQueue.take()
                     try {
-                        println(s"protocol: ${record.protocol}  vulnPubDate: ${record.vulnPubDate} hasBeenMitigated: ${record.hasBeenMitigated}")
+                        println(record)
                     }
                     hack = Instant.now()
-                } while(acasLogQueue.size() >= 0 && (Duration.between(hack, Instant.now()).toMinutes < 15))
+                } while(jsonLogQueue.size() >= 0 && (Duration.between(hack, Instant.now()).toMinutes < 15))
 
             } catch {
                 case e: IOException =>
