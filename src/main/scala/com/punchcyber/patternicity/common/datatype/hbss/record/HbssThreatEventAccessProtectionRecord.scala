@@ -1,5 +1,8 @@
 package com.punchcyber.patternicity.common.datatype.hbss.record
 
+import java.time.{Instant, LocalDate, LocalDateTime, OffsetDateTime, ZoneOffset}
+import java.time.format.DateTimeFormatter
+
 import com.punchcyber.patternicity.common.datatype.json.record._
 
 //Grand scheme here is to match the raw data source as closely as possible with the "Raw" record type, then do more
@@ -22,13 +25,13 @@ case class HbssThreatEventAccessProtectionRecordRaw(`EPOEvents.TargetPort`: Opti
                                                     `EPOEvents.AnalyzerDATVersion`: Option[String], `EPOEvents.SourceUserName`: Option[String], `EPOEvents.SourceIPV6`: String,
                                                     `EPOEvents.SourceProcessName`: String, `VSECustomEvent.MD5`: Option[String], `EPOEvents.ThreatActionTaken`: String,
                                                     `EPOEvents.DetectedUTC`: String
-                     ) extends JsonRecordRaw
+                                                   ) extends JsonRecordRaw
 
 
 case class HbssThreatEventAccessProtectionRecord(EPOEvents_TargetPort: Option[Int], EPOEvents_TargetFileName: String, EPOEvents_ThreatName: String,
                                                  EPOEvents_ThreatHandled: Boolean, EPOEvents_ThreatType: String, EPOEvents_AnalyzerHostName: String,
                                                  EPOEvents_TargetProtocol: Option[String], EPOLeafNode_NodeName: String, EPOEvents_SourceURL: Option[String],
-                                                 EPOEvents_SourceIPV4: String, EPOEvents_TargetMAC: Option[String], EPOEvents_ReceivedUTC: String,
+                                                 EPOEvents_SourceIPV4: String, EPOEvents_TargetMAC: Option[String], EPOEvents_ReceivedUTC: Instant,
                                                  EPOEvents_ThreatCategory: String, EPOEvents_TargetUserName: String, EPOEvents_SourceHostName: String,
                                                  EPOEvents_TargetIPV4: String, EPOEvents_AnalyzerEngineVersion: Option[String], EPOEvents_AnalyzerIPV4: String,
                                                  EPOEvents_Analyzer: String, EPOEvents_AnalyzerIPV6: String, EPOEvents_AnalyzerDetectionMethod: String,
@@ -38,12 +41,19 @@ case class HbssThreatEventAccessProtectionRecord(EPOEvents_TargetPort: Option[In
                                                  EPOEvents_TargetHostName: String, EPOEvents_TargetIPV6: String, EPOEvents_ThreatSeverity: Int,
                                                  EPOEvents_AnalyzerDATVersion: Option[String], EPOEvents_SourceUserName: Option[String], EPOEvents_SourceIPV6: String,
                                                  EPOEvents_SourceProcessName: String, VSECustomEvent_MD5: Option[String], EPOEvents_ThreatActionTaken: String,
-                                                 EPOEvents_DetectedUTC: String
-                     ) extends JsonRecord
+                                                 EPOEvents_DetectedUTC: Instant
+                                                ) extends JsonRecord
 
 
 object HbssThreatEventAccessProtectionRecord extends JsonRecord {
+  def stringToInstant(raw: String): Instant = {
+    val isoFormatter = DateTimeFormatter.ISO_DATE_TIME
+
+    OffsetDateTime.parse(raw).withOffsetSameInstant(ZoneOffset.UTC).toInstant
+  }
   def apply(raw: HbssThreatEventAccessProtectionRecordRaw): HbssThreatEventAccessProtectionRecord = {
+    // Pretty verbose for not a lot of value add - might be more useful in the future if we use more stringent types
+    // or do other data cleansing.
     HbssThreatEventAccessProtectionRecord(
       EPOEvents_TargetPort = raw.`EPOEvents.TargetPort`,
       EPOEvents_TargetFileName = raw.`EPOEvents.TargetFileName`,
@@ -56,7 +66,7 @@ object HbssThreatEventAccessProtectionRecord extends JsonRecord {
       EPOEvents_SourceURL = raw.`EPOEvents.SourceURL`,
       EPOEvents_SourceIPV4 = raw.`EPOEvents.SourceIPV4`,
       EPOEvents_TargetMAC = raw.`EPOEvents.TargetMAC`,
-      EPOEvents_ReceivedUTC = raw.`EPOEvents.ReceivedUTC`,
+      EPOEvents_ReceivedUTC = stringToInstant(raw.`EPOEvents.ReceivedUTC`),
       EPOEvents_ThreatCategory = raw.`EPOEvents.ThreatCategory`,
       EPOEvents_TargetUserName = raw.`EPOEvents.TargetUserName`,
       EPOEvents_SourceHostName = raw.`EPOEvents.SourceHostName`,
@@ -84,7 +94,7 @@ object HbssThreatEventAccessProtectionRecord extends JsonRecord {
       EPOEvents_SourceProcessName = raw.`EPOEvents.SourceProcessName`,
       VSECustomEvent_MD5 = raw.`VSECustomEvent.MD5`,
       EPOEvents_ThreatActionTaken = raw.`EPOEvents.ThreatActionTaken`,
-      EPOEvents_DetectedUTC = raw.`EPOEvents.DetectedUTC`
+      EPOEvents_DetectedUTC = stringToInstant(raw.`EPOEvents.DetectedUTC`)
     )
   }
 }

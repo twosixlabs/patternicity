@@ -22,7 +22,7 @@ import io.circe.generic.auto._
 import io.circe.parser._
 import scala.util.control.Breaks.{break, breakable}
 
-object AcasTest {
+object JsonTest {
     
     val fileQueue: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
     val jsonLogQueue: ArrayBlockingQueue[JsonRecord] = new ArrayBlockingQueue[JsonRecord](100000)
@@ -31,7 +31,7 @@ object AcasTest {
         
         val findFiles: Thread = new Thread(new FindFiles)
         val jsonRecordFileProducer: Thread = new Thread(new JsonRecordParse)
-        val hbaseWriter: Thread = new Thread(new HbaseWriter)
+        val hbaseWriter: Thread = new Thread(new Writer)
         
         findFiles.start()
         jsonRecordFileProducer.start()
@@ -41,7 +41,7 @@ object AcasTest {
     class FindFiles extends Runnable {
         override def run(): Unit = {
 //            val watchedDirectory: String = "/shares/data/input/restricted/DARPA"
-            val watchedDirectory: String = "/home/nathan-sanford/code/CHASE/patternicity/src/resources/acas"
+            val watchedDirectory: String = "/home/nathan-sanford/code/CHASE/patternicity/src/resources/json"
             System.out.println(s"About to start reading from $watchedDirectory")
 
             Files.walk(Paths.get(watchedDirectory))
@@ -206,7 +206,7 @@ object AcasTest {
         }
     }
     
-    class HbaseWriter extends Runnable {
+    class Writer extends Runnable {
         val hbaseConf: Configuration = HBaseConfiguration.create()
         // Cluster configs
 //        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
