@@ -1,7 +1,6 @@
 package com.punchcyber.patternicity.common.datatype.hbss.record
 
-import java.time.{Instant, LocalDate, LocalDateTime, OffsetDateTime, ZoneOffset}
-import java.time.format.DateTimeFormatter
+import java.time.Instant
 
 import com.punchcyber.patternicity.common.datatype.json.record._
 
@@ -46,11 +45,6 @@ case class HbssThreatEventAccessProtectionRecord(EPOEvents_TargetPort: Option[In
 
 
 object HbssThreatEventAccessProtectionRecord extends JsonRecord {
-  def stringToInstant(raw: String): Instant = {
-    val isoFormatter = DateTimeFormatter.ISO_DATE_TIME
-
-    OffsetDateTime.parse(raw).withOffsetSameInstant(ZoneOffset.UTC).toInstant
-  }
   def apply(raw: HbssThreatEventAccessProtectionRecordRaw): HbssThreatEventAccessProtectionRecord = {
     // Pretty verbose for not a lot of value add - might be more useful in the future if we use more stringent types
     // or do other data cleansing.

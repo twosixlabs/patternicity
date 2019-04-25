@@ -5,9 +5,9 @@ import java.nio.file.{Files, Paths}
 import java.time.{Duration, Instant}
 import java.util.concurrent.{ArrayBlockingQueue, ConcurrentLinkedQueue}
 
-import com.punchcyber.patternicity.common.datatype.hbss.record.{HbssThreatEventAccessProtectionRecord, HbssThreatEventAccessProtectionRecordRaw}
+import com.punchcyber.patternicity.common.datatype.hbss.record.{HbssHipsEventRecord, HbssHipsEventRecordRaw, HbssThreatEventAccessProtectionRecord, HbssThreatEventAccessProtectionRecordRaw, HbssThreatEventRecord, HbssThreatEventRecordRaw}
 import com.punchcyber.patternicity.common.datatype.acas.record.{AcasRecord, AcasRecordRaw}
-import com.punchcyber.patternicity.common.datatype.json.record.{JsonRecord, JsonRecordRaw}
+import com.punchcyber.patternicity.common.datatype.json.record.JsonRecord
 import com.punchcyber.patternicity.common.utilities.FileMagic.{comp, magics, recursiveFindFileType}
 import com.punchcyber.patternicity.enums.filetypes.SupportedFileType
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveException, ArchiveInputStream, ArchiveStreamFactory}
@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory
 import scala.io.Source
 import io.circe.generic.auto._
 import io.circe.parser._
+
 import scala.util.control.Breaks.{break, breakable}
 
 object JsonTest {
@@ -69,6 +70,14 @@ object JsonTest {
                                             case Left(failure) => println(failure)
                                             case Right(json) => fileQueue.offer(filename); break
                                         }
+                                        decode[HbssThreatEventRecordRaw](firstRecordString.get) match {
+                                            case Left(failure) => println(failure)
+                                            case Right(json) => fileQueue.offer(filename); break
+                                        }
+                                        decode[HbssHipsEventRecordRaw](firstRecordString.get) match {
+                                            case Left(failure) => println(failure)
+                                            case Right(json) => fileQueue.offer(filename); break
+                                        }
                                     }
 
                                 case Some(false) =>
@@ -96,6 +105,22 @@ object JsonTest {
                     case Left(failure) =>
                     case Right(record) => {
                         jsonLogQueue.offer(HbssThreatEventAccessProtectionRecord(record))
+                        matchFound = true
+                        break
+                    }
+                }
+                decode[HbssThreatEventRecordRaw](line) match {
+                    case Left(failure) =>
+                    case Right(record) => {
+                        jsonLogQueue.offer(HbssThreatEventRecord(record))
+                        matchFound = true
+                        break
+                    }
+                }
+                decode[HbssHipsEventRecordRaw](line) match {
+                    case Left(failure) =>
+                    case Right(record) => {
+                        jsonLogQueue.offer(HbssHipsEventRecord(record))
                         matchFound = true
                         break
                     }
@@ -226,6 +251,7 @@ object JsonTest {
                 do {
                     val record = jsonLogQueue.take()
                     try {
+                        // This is where the record should be added to the database, not just printed out.
                         println(record)
                     }
                     hack = Instant.now()
