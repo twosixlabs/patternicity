@@ -2,8 +2,16 @@ package com.punchcyber.patternicity.common.datatype.json.record
 
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
 
+import org.apache.hadoop.hbase.client.Put
+
 trait JsonRecordRaw
 trait JsonRecord {
+  def getHbasePut: Put
+
+}
+
+trait JsonHelperRecord {
+
   def convertBlankableDouble(raw: String): Option[Double] = {
     raw match {
       case "" => None

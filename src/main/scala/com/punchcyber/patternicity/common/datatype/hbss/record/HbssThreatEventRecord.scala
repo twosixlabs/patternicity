@@ -2,7 +2,8 @@ package com.punchcyber.patternicity.common.datatype.hbss.record
 
 import java.time.Instant
 
-import com.punchcyber.patternicity.common.datatype.json.record.{JsonRecord, JsonRecordRaw}
+import com.punchcyber.patternicity.common.datatype.json.record.{JsonHelperRecord, JsonRecord, JsonRecordRaw}
+import org.apache.hadoop.hbase.client.Put
 
 case class HbssThreatEventRecordRaw(`EPOComputerProperties.OSPlatform`: Option[String],
                                     `EPOEvents.ThreatName`: Option[String],
@@ -182,10 +183,13 @@ case class HbssThreatEventRecord(   EPOComputerProperties_OSPlatform: Option[Str
                                     EPOComputerProperties_SubnetAddress: Option[String],
                                     EPOLeafNode_ExcludedTags: Option[String],
                                     EPOEvents_DetectedUTC: Instant,
-                                    EPOComputerProperties_LastAgentHandler: Option[Long]) extends JsonRecord
+                                    EPOComputerProperties_LastAgentHandler: Option[Long]) extends JsonRecord {
+  override def getHbasePut: Put = {
+    throw new UnsupportedOperationException("not yet implemented")
+  }}
 
 
-object HbssThreatEventRecord extends JsonRecord {
+object HbssThreatEventRecord extends JsonHelperRecord {
   def apply(raw: HbssThreatEventRecordRaw): HbssThreatEventRecord = {
     HbssThreatEventRecord(
       EPOComputerProperties_OSPlatform = raw.`EPOComputerProperties.OSPlatform`,

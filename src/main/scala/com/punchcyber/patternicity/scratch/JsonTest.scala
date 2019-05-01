@@ -42,7 +42,7 @@ object JsonTest {
     class FindFiles extends Runnable {
         override def run(): Unit = {
 //            val watchedDirectory: String = "/shares/data/input/restricted/DARPA"
-            val watchedDirectory: String = "/home/nathan-sanford/code/CHASE/patternicity/src/resources/json"
+            val watchedDirectory: String = "src/resources/acas"
             System.out.println(s"About to start reading from $watchedDirectory")
 
             Files.walk(Paths.get(watchedDirectory))
@@ -234,17 +234,19 @@ object JsonTest {
     class Writer extends Runnable {
         val hbaseConf: Configuration = HBaseConfiguration.create()
         // Cluster configs
-//        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
-//        hbaseConf.set("hbase.zookeeper.quorum", "master-1.punch.datareservoir.net,master-2.punch.datareservoir.net,master-3.punch.datareservoir.net,master-4.punch.datareservoir.net,master-5.punch.datareservoir.net")
-//        hbaseConf.set("zookeeper.znode.parent", "/hbase")
+        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
+        hbaseConf.set("hbase.zookeeper.quorum", "master-1.punch.datareservoir.net,master-2.punch.datareservoir.net,master-3.punch.datareservoir.net,master-4.punch.datareservoir.net,master-5.punch.datareservoir.net")
+        hbaseConf.set("zookeeper.znode.parent", "/hbase")
 
         // local configs
-        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
-        hbaseConf.set("hbase.zookeeper.quorum", "localhost")
-        
+//        hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
+//        hbaseConf.set("hbase.zookeeper.quorum", "localhost")
+//        hbaseConf.set("zookeeper.znode.parent", "/hbase")
+
+
         private val LOG = LoggerFactory.getLogger(classOf[Nothing])
         
-        override def run(): Unit = {
+        def runStdout(): Unit = {
             try {
                 var hack: Instant = Instant.now()
 
@@ -256,6 +258,46 @@ object JsonTest {
                     }
                     hack = Instant.now()
                 } while(jsonLogQueue.size() >= 0 && (Duration.between(hack, Instant.now()).toMinutes < 15))
+
+            } catch {
+                case e: IOException =>
+                    LOG.info("exception while creating/destroying Connection or BufferedMutator", e)
+            }
+        }
+
+
+        override def run(): Unit = {
+            val listener: BufferedMutator.ExceptionListener = (e: RetriesExhaustedWithDetailsException, _: BufferedMutator) => {
+                var i = 0
+                while ( {
+                    i < e.getNumExceptions
+                }) {
+                    LOG.info("Failed to sent put " + e.getRow(i) + ".")
+
+                    {
+                        i += 1
+                        i - 1
+                    }
+                }
+            }
+
+            try {
+                val hbaseConnection: Connection = ConnectionFactory.createConnection(hbaseConf)
+
+                val tableMutator = hbaseConnection.getBufferedMutator(new BufferedMutatorParams(TableName.valueOf("HACKSAW:ACAS")).listener(listener))
+
+                var hack: Instant = Instant.now()
+
+                do {
+                    val record = jsonLogQueue.take()
+                    try {
+                        tableMutator.mutate(record.getHbasePut)
+                    }
+                    hack = Instant.now()
+
+                } while(jsonLogQueue.size() >= 0 && (Duration.between(hack,Instant.now()).toMinutes < 15))
+
+                tableMutator.close()
 
             } catch {
                 case e: IOException =>

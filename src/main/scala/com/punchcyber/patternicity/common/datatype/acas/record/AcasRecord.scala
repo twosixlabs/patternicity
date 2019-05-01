@@ -1,6 +1,12 @@
 package com.punchcyber.patternicity.common.datatype.acas.record
 
+import java.nio.ByteBuffer
+import java.time.Instant
+import java.util.UUID
+
 import com.punchcyber.patternicity.common.datatype.json.record._
+import org.apache.hadoop.hbase.client.Put
+import org.apache.hadoop.hbase.util.Bytes
 
 case class AcasFamily(`type`: String, id: Long, name: String)
 case class AcasSeverity(description: String, id: Long, name: String)
@@ -14,7 +20,23 @@ case class AcasRecord(macAddress: String, protocol: String, vulnPubDate: Option[
                       temporalScore: Option[Double], exploitFrameworks: String, description: String,
                       repository: AcasRepository, bid: String, xref: String, stigSeverity: Option[Double],
                       firstSeen: Long, netbiosName: String, pluginName: String, exploitEase: Option[Double],
-                      patchPubDate: Option[Long], cve: String, seeAlso: String) extends JsonRecord
+                      patchPubDate: Option[Long], cve: String, seeAlso: String) extends JsonRecord {
+
+  val rowKey: String = UUID.randomUUID().toString
+
+  def getHbasePut: Put = {
+    val put: Put = new Put(Bytes.toBytes(rowKey),Instant.now().toEpochMilli)
+
+    print(bid)
+
+    put.addColumn(
+      Bytes.toBytes("B"),
+      "patchPubDate".getBytes,
+      ByteBuffer.allocate(4).putInt(1234).array)
+
+    put
+  }
+}
 
 case class AcasFamilyRaw(`type`: String, id: String, name: String)
 case class AcasSeverityRaw(description: String, id: String, name: String)
@@ -59,7 +81,7 @@ object AcasRepository {
   }
 }
 
-object AcasRecord extends JsonRecord {
+object AcasRecord extends JsonHelperRecord  {
   def convertPubDate(raw: String): Option[Long] = {
     raw match {
       case "-1" => None
@@ -115,4 +137,6 @@ object AcasRecord extends JsonRecord {
       seeAlso = raw.seeAlso
     )
   }
+
+
 }

@@ -1,7 +1,9 @@
 package com.punchcyber.patternicity.common.datatype.hbss.record
 
-import com.punchcyber.patternicity.common.datatype.json.record.{JsonRecord, JsonRecordRaw}
+import com.punchcyber.patternicity.common.datatype.json.record.{JsonHelperRecord, JsonRecord, JsonRecordRaw}
 import java.time.Instant
+
+import org.apache.hadoop.hbase.client.Put
 
 case class HbssHipsEventRecordRaw(`EPOEvents.TargetPort`: Option[Int],
                                   `EPOEvents.TargetFileName`: Option[String],
@@ -109,9 +111,13 @@ case class HbssHipsEventRecord(EPOEvents_TargetPort: Option[Int],
                                ERP_View_HIP8_IPSEventParameter_EventID: Long,
                                HIP8_EventInfo_AppDesc: Option[String],
                                EPOEvents_ThreatActionTaken: Option[String],
-                               EPOEvents_DetectedUTC: Instant) extends JsonRecord
+                               EPOEvents_DetectedUTC: Instant) extends JsonRecord {
+  override def getHbasePut: Put = {
+    throw new UnsupportedOperationException("not yet implemented")
+  }
+}
 
-object HbssHipsEventRecord extends JsonRecord {
+object HbssHipsEventRecord extends JsonHelperRecord {
   def apply(raw: HbssHipsEventRecordRaw): HbssHipsEventRecord = {
     HbssHipsEventRecord(EPOEvents_TargetPort = raw.`EPOEvents.TargetPort`,
       EPOEvents_TargetFileName = raw.`EPOEvents.TargetFileName`,

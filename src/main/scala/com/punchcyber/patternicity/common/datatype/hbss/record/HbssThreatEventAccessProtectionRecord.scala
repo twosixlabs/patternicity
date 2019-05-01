@@ -3,6 +3,7 @@ package com.punchcyber.patternicity.common.datatype.hbss.record
 import java.time.Instant
 
 import com.punchcyber.patternicity.common.datatype.json.record._
+import org.apache.hadoop.hbase.client.Put
 
 //Grand scheme here is to match the raw data source as closely as possible with the "Raw" record type, then do more
 //specific conversions with the non "Raw" record type. Ideally this more strongly typed non-raw record type will give
@@ -41,10 +42,13 @@ case class HbssThreatEventAccessProtectionRecord(EPOEvents_TargetPort: Option[In
                                                  EPOEvents_AnalyzerDATVersion: Option[String], EPOEvents_SourceUserName: Option[String], EPOEvents_SourceIPV6: String,
                                                  EPOEvents_SourceProcessName: String, VSECustomEvent_MD5: Option[String], EPOEvents_ThreatActionTaken: String,
                                                  EPOEvents_DetectedUTC: Instant
-                                                ) extends JsonRecord
+                                                ) extends JsonRecord {
+  override def getHbasePut: Put = {
+    throw new UnsupportedOperationException("not yet implemented")
+  }}
 
 
-object HbssThreatEventAccessProtectionRecord extends JsonRecord {
+object HbssThreatEventAccessProtectionRecord extends JsonHelperRecord {
   def apply(raw: HbssThreatEventAccessProtectionRecordRaw): HbssThreatEventAccessProtectionRecord = {
     // Pretty verbose for not a lot of value add - might be more useful in the future if we use more stringent types
     // or do other data cleansing.
