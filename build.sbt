@@ -58,6 +58,9 @@ libraryDependencies ++= Seq(
             exclude("commons-collections", "commons-collections")
 )
 
+// avoids the warning at https://www.slf4j.org/codes.html#StaticLoggerBinder
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.26"
+
 val circeVersion = "0.10.0"
 
 libraryDependencies ++= Seq(
